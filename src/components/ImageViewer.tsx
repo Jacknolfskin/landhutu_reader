@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { 
   ZoomIn, 
   ZoomOut, 
@@ -24,6 +24,31 @@ export const ImageViewer: React.FC<ImageViewerProps> = ({ fileNode, content }) =
   const [dimensions, setDimensions] = useState<{ width: number; height: number } | null>(null);
   const [bgStyle, setBgStyle] = useState<'checker' | 'light' | 'dark'>('checker');
 
+  const stageRef = useRef<HTMLDivElement>(null);
+
+  // Calculate auto-fit zoom scale factor so image fits completely inside stage viewport
+  const calculateFitScale = useCallback((imgWidth: number, imgHeight: number, currentRotation: number = rotation) => {
+    if (!stageRef.current || !imgWidth || !imgHeight) return 1;
+
+    const padding = 48; // padding around stage container
+    const availWidth = Math.max(100, stageRef.current.clientWidth - padding);
+    const availHeight = Math.max(100, stageRef.current.clientHeight - padding);
+
+    const isSwapped = (currentRotation / 90) % 2 !== 0;
+    const effectiveWidth = isSwapped ? imgHeight : imgWidth;
+    const effectiveHeight = isSwapped ? imgWidth : imgHeight;
+
+    const scaleX = availWidth / effectiveWidth;
+    const scaleY = availHeight / effectiveHeight;
+    const fitScale = Math.min(scaleX, scaleY);
+
+    if (fitScale >= 1.0) {
+      return 1.0;
+    }
+
+    return Math.max(0.05, Number(fitScale.toFixed(2)));
+  }, [rotation]);
+
   useEffect(() => {
     let url = '';
 
@@ -38,6 +63,7 @@ export const ImageViewer: React.FC<ImageViewerProps> = ({ fileNode, content }) =
     }
 
     setImageUrl(url);
+    setDimensions(null);
     setZoom(1);
     setRotation(0);
 
@@ -51,15 +77,50 @@ export const ImageViewer: React.FC<ImageViewerProps> = ({ fileNode, content }) =
   const handleImageLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
     const { naturalWidth, naturalHeight } = e.currentTarget;
     setDimensions({ width: naturalWidth, height: naturalHeight });
+    const autoScale = calculateFitScale(naturalWidth, naturalHeight, 0);
+    setZoom(autoScale);
   };
 
-  const handleZoomIn = () => setZoom(prev => Math.min(prev + 0.25, 4));
-  const handleZoomOut = () => setZoom(prev => Math.max(prev - 0.25, 0.25));
-  const handleRotate = () => setRotation(prev => (prev + 90) % 360);
-  const handleReset = () => {
-    setZoom(1);
-    setRotation(0);
+  const handleZoomIn = () => setZoom(prev => Math.min(Number((prev + 0.15).toFixed(2)), 5.0));
+  const handleZoomOut = () => setZoom(prev => Math.max(Number((prev - 0.15).toFixed(2)), 0.05));
+  
+  const handleRotate = () => {
+    const nextRotation = (rotation + 90) % 360;
+    setRotation(nextRotation);
+    if (dimensions) {
+      const autoScale = calculateFitScale(dimensions.width, dimensions.height, nextRotation);
+      setZoom(autoScale);
+    }
   };
+
+  const handleReset = () => {
+    setRotation(0);
+    if (dimensions) {
+      const autoScale = calculateFitScale(dimensions.width, dimensions.height, 0);
+      setZoom(autoScale);
+    } else {
+      setZoom(1);
+    }
+  };
+
+  // Recalculate fit scale on viewport resize
+  useEffect(() => {
+    const stage = stageRef.current;
+    if (!stage) return;
+
+    const resizeObserver = new ResizeObserver(() => {
+      if (dimensions) {
+        // Auto adjust fit if container resizes significantly
+        const autoScale = calculateFitScale(dimensions.width, dimensions.height, rotation);
+        if (autoScale < 1.0) {
+          setZoom(autoScale);
+        }
+      }
+    });
+
+    resizeObserver.observe(stage);
+    return () => resizeObserver.disconnect();
+  }, [dimensions, rotation, calculateFitScale]);
 
   return (
     <div className="flex-1 flex flex-col bg-zinc-100 dark:bg-zinc-950 overflow-hidden">
@@ -119,7 +180,7 @@ export const ImageViewer: React.FC<ImageViewerProps> = ({ fileNode, content }) =
           <button
             onClick={handleReset}
             className="p-1.5 rounded text-zinc-600 dark:text-zinc-300 hover:bg-white dark:hover:bg-zinc-700 transition-colors"
-            title="重置缩放与角度"
+            title="适应窗口完全显示"
           >
             <Maximize2 className="w-3.5 h-3.5" />
           </button>
@@ -136,7 +197,8 @@ export const ImageViewer: React.FC<ImageViewerProps> = ({ fileNode, content }) =
 
       {/* Main Image Stage */}
       <div 
-        className={`flex-1 flex items-center justify-center p-8 overflow-auto custom-scrollbar relative ${
+        ref={stageRef}
+        className={`flex-1 flex items-center justify-center p-6 overflow-auto custom-scrollbar relative ${
           bgStyle === 'checker' 
             ? 'bg-[radial-gradient(#cbd5e1_1px,transparent_1px)] [background-size:16px_16px] dark:bg-[radial-gradient(#334155_1px,transparent_1px)]' 
             : bgStyle === 'light'
@@ -145,16 +207,18 @@ export const ImageViewer: React.FC<ImageViewerProps> = ({ fileNode, content }) =
         }`}
       >
         {imageUrl ? (
-          <img
-            src={imageUrl}
-            alt={fileNode.name}
-            onLoad={handleImageLoad}
-            className="max-w-none transition-transform duration-200 shadow-lg rounded object-contain"
-            style={{
-              transform: `scale(${zoom}) rotate(${rotation}deg)`,
-              transformOrigin: 'center center'
-            }}
-          />
+          <div className="flex items-center justify-center min-h-full min-w-full">
+            <img
+              src={imageUrl}
+              alt={fileNode.name}
+              onLoad={handleImageLoad}
+              className="max-w-none transition-transform duration-200 shadow-lg rounded object-contain"
+              style={{
+                transform: `scale(${zoom}) rotate(${rotation}deg)`,
+                transformOrigin: 'center center'
+              }}
+            />
+          </div>
         ) : (
           <div className="text-xs text-zinc-400">正在生成图像预览...</div>
         )}

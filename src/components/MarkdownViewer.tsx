@@ -235,49 +235,6 @@ const MarkdownViewerComponent: React.FC<MarkdownViewerProps> = ({
     }
   };
 
-  // Scroll listener to update active heading in outline as user scrolls through document
-  React.useEffect(() => {
-    const scrollContainer = scrollContainerRef.current;
-    const article = articleRef.current;
-    if (!scrollContainer || !article || !onHeadingIntersect) return;
-
-    let ticking = false;
-
-    const handleScroll = () => {
-      if (!ticking) {
-        requestAnimationFrame(() => {
-          ticking = false;
-          const headings = Array.from(article.querySelectorAll('h1[id], h2[id], h3[id], h4[id], h5[id], h6[id]')) as HTMLElement[];
-          if (headings.length === 0) return;
-
-          const containerTop = scrollContainer.getBoundingClientRect().top;
-          let currentHeadingId: string | null = null;
-
-          for (const heading of headings) {
-            const rect = heading.getBoundingClientRect();
-            if (rect.top - containerTop <= 140) {
-              currentHeadingId = heading.id;
-            } else {
-              break;
-            }
-          }
-
-          if (!currentHeadingId && headings.length > 0) {
-            currentHeadingId = headings[0].id;
-          }
-
-          if (currentHeadingId && currentHeadingId !== activeHeadingId) {
-            onHeadingIntersect(currentHeadingId);
-          }
-        });
-        ticking = true;
-      }
-    };
-
-    scrollContainer.addEventListener('scroll', handleScroll, { passive: true });
-    return () => scrollContainer.removeEventListener('scroll', handleScroll);
-  }, [content, onHeadingIntersect, activeHeadingId]);
-
   const isDarkMode = theme === 'dark';
 
   const components = useMemo(() => ({
@@ -530,11 +487,6 @@ const MarkdownViewerComponent: React.FC<MarkdownViewerProps> = ({
     >
       {/* Top Document Header Bar */}
       <div className="max-w-4xl mx-auto px-6 sm:px-10 pt-8 pb-6 border-b border-zinc-100 dark:border-zinc-800/80 mb-8">
-        <div className="flex items-center gap-2 text-xs font-medium text-blue-600 dark:text-blue-400 mb-2">
-          <FileText className="w-3.5 h-3.5" />
-          <span className="truncate">{fileNode.path || fileNode.name}</span>
-        </div>
-
         <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-zinc-900 dark:text-zinc-100 mb-3">
           {fileNode.name}
         </h1>

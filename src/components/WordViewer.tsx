@@ -78,49 +78,6 @@ export const WordViewer: React.FC<WordViewerProps> = ({
     }
   };
 
-  // Scroll listener to update active heading in outline as user scrolls through Word document
-  useEffect(() => {
-    const scrollContainer = scrollContainerRef.current;
-    const wordDiv = wordContentRef.current;
-    if (!scrollContainer || !wordDiv || !onHeadingIntersect) return;
-
-    let ticking = false;
-
-    const handleScroll = () => {
-      if (!ticking) {
-        requestAnimationFrame(() => {
-          ticking = false;
-          const headings = Array.from(wordDiv.querySelectorAll('h1[id], h2[id], h3[id], h4[id], h5[id], h6[id]')) as HTMLElement[];
-          if (headings.length === 0) return;
-
-          const containerTop = scrollContainer.getBoundingClientRect().top;
-          let currentHeadingId: string | null = null;
-
-          for (const heading of headings) {
-            const rect = heading.getBoundingClientRect();
-            if (rect.top - containerTop <= 140) {
-              currentHeadingId = heading.id;
-            } else {
-              break;
-            }
-          }
-
-          if (!currentHeadingId && headings.length > 0) {
-            currentHeadingId = headings[0].id;
-          }
-
-          if (currentHeadingId && currentHeadingId !== activeHeadingId) {
-            onHeadingIntersect(currentHeadingId);
-          }
-        });
-        ticking = true;
-      }
-    };
-
-    scrollContainer.addEventListener('scroll', handleScroll, { passive: true });
-    return () => scrollContainer.removeEventListener('scroll', handleScroll);
-  }, [htmlContent, onHeadingIntersect, activeHeadingId]);
-
   useEffect(() => {
     let isMounted = true;
     setLoading(true);
@@ -215,11 +172,6 @@ export const WordViewer: React.FC<WordViewerProps> = ({
       <div className="max-w-4xl mx-auto bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-xs overflow-hidden">
         {/* Document Metadata header */}
         <div className="p-6 sm:p-8 border-b border-zinc-100 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/50">
-          <div className="flex items-center gap-2 text-xs font-medium text-indigo-600 dark:text-indigo-400 mb-2">
-            <FileText className="w-4 h-4" />
-            <span>Word 文档预览 (.docx)</span>
-          </div>
-
           <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 mb-3">
             {fileNode.name}
           </h1>
