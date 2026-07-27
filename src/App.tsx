@@ -71,6 +71,15 @@ export default function App() {
   const [isDragging, setIsDragging] = useState<boolean>(false);
   const [isInitialized, setIsInitialized] = useState<boolean>(false);
   const [isOpenModalOpen, setIsOpenModalOpen] = useState<boolean>(false);
+  const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const showToast = useCallback((msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => {
+      setToastMessage(null);
+    }, 5000);
+  }, []);
 
   // Resizable sidebar widths
   const [fileTreeWidth, setFileTreeWidth] = useState<number>(() => {
@@ -198,37 +207,38 @@ export default function App() {
   useEffect(() => {
     if (!isResizingLeft) return;
 
-    let rafId = 0;
-    let lastWidth = 0;
+    let animationFrameId: number | null = null;
+    let latestWidth = fileTreeWidth;
 
     const handleMouseMove = (e: MouseEvent) => {
       const newWidth = Math.min(Math.max(160, e.clientX), Math.min(600, window.innerWidth * 0.45));
-      lastWidth = newWidth;
-      // Coalesce multiple mousemoves into a single render per animation frame
-      // so dragging stays smooth even with a large markdown document open.
-      if (!rafId) {
-        rafId = requestAnimationFrame(() => {
-          rafId = 0;
-          setFileTreeWidth(lastWidth);
+      latestWidth = newWidth;
+
+      if (animationFrameId === null) {
+        animationFrameId = requestAnimationFrame(() => {
+          animationFrameId = null;
+          setFileTreeWidth(latestWidth);
         });
       }
     };
 
     const handleMouseUp = () => {
-      if (rafId) cancelAnimationFrame(rafId);
-      if (lastWidth > 0) {
-        setFileTreeWidth(lastWidth);
-        localStorage.setItem('fileTreeWidth', lastWidth.toString());
+      if (animationFrameId !== null) {
+        cancelAnimationFrame(animationFrameId);
+        animationFrameId = null;
       }
       setIsResizingLeft(false);
+      localStorage.setItem('fileTreeWidth', latestWidth.toString());
     };
 
     window.addEventListener('mousemove', handleMouseMove);
     window.addEventListener('mouseup', handleMouseUp);
     return () => {
+      if (animationFrameId !== null) {
+        cancelAnimationFrame(animationFrameId);
+      }
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
-      if (rafId) cancelAnimationFrame(rafId);
     };
   }, [isResizingLeft]);
 
@@ -241,35 +251,38 @@ export default function App() {
   useEffect(() => {
     if (!isResizingRight) return;
 
-    let rafId = 0;
-    let lastWidth = 0;
+    let animationFrameId: number | null = null;
+    let latestWidth = outlineWidth;
 
     const handleMouseMove = (e: MouseEvent) => {
       const newWidth = Math.min(Math.max(180, window.innerWidth - e.clientX), Math.min(600, window.innerWidth * 0.45));
-      lastWidth = newWidth;
-      if (!rafId) {
-        rafId = requestAnimationFrame(() => {
-          rafId = 0;
-          setOutlineWidth(lastWidth);
+      latestWidth = newWidth;
+
+      if (animationFrameId === null) {
+        animationFrameId = requestAnimationFrame(() => {
+          animationFrameId = null;
+          setOutlineWidth(latestWidth);
         });
       }
     };
 
     const handleMouseUp = () => {
-      if (rafId) cancelAnimationFrame(rafId);
-      if (lastWidth > 0) {
-        setOutlineWidth(lastWidth);
-        localStorage.setItem('outlineWidth', lastWidth.toString());
+      if (animationFrameId !== null) {
+        cancelAnimationFrame(animationFrameId);
+        animationFrameId = null;
       }
       setIsResizingRight(false);
+      localStorage.setItem('outlineWidth', latestWidth.toString());
     };
 
     window.addEventListener('mousemove', handleMouseMove);
     window.addEventListener('mouseup', handleMouseUp);
     return () => {
+      if (animationFrameId !== null) {
+        cancelAnimationFrame(animationFrameId);
+      }
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
-      if (rafId) cancelAnimationFrame(rafId);
     };
   }, [isResizingRight]);
 
@@ -290,11 +303,12 @@ export default function App() {
   // Helper to add or activate a folder in the workspace
   const addFolderToWorkspace = useCallback((newTree: FileNode) => {
     setLoadedFolders(prev => {
-      // Check if folder with same name already exists
-      const existingIdx = prev.findIndex(f => f.name === newTree.name);
+      // Check if folder with same name or same id already exists
+      const existingIdx = prev.findIndex(f => f.name === newTree.name || f.id === newTree.id);
       if (existingIdx >= 0) {
         const updated = [...prev];
-        updated[existingIdx] = newTree;
+        const oldId = prev[existingIdx].id;
+        updated[existingIdx] = { ...newTree, id: oldId };
         return updated;
       }
       return [...prev, newTree];
@@ -302,12 +316,12 @@ export default function App() {
     setActiveFolderId(newTree.id);
     setShowFileTree(true);
 
-    // Auto select first file
+    // Re-sync selected file or auto select first file
     const allFiles = getAllFiles(newTree);
     if (allFiles.length > 0) {
       handleSelectFile(allFiles[0]);
     }
-  }, []);
+  }, [handleSelectFile]);
 
   // Switch active folder
   const handleSwitchFolder = useCallback((folderId: string) => {
@@ -323,7 +337,7 @@ export default function App() {
     if (!fileInTarget && targetFiles.length > 0) {
       handleSelectFile(targetFiles[0]);
     }
-  }, [loadedFolders, selectedFile]);
+  }, [loadedFolders, selectedFile, handleSelectFile]);
 
   // Remove/close a folder from workspace
   const handleCloseFolder = useCallback((folderId: string, e?: React.MouseEvent) => {
@@ -349,21 +363,93 @@ export default function App() {
       }
       return nextFolders;
     });
-  }, [activeFolderId]);
+  }, [activeFolderId, handleSelectFile]);
 
   // Open Local modal trigger
   const handleOpenLocal = () => {
     setIsOpenModalOpen(true);
   };
 
+  // Refresh current folder content
+  const handleRefreshFolder = useCallback(async () => {
+    if (!activeFolder || isRefreshing) return;
+
+    setIsRefreshing(true);
+    try {
+      let updatedTree: FileNode | null = null;
+
+      // 1. Re-scan via FileSystemDirectoryHandle directly if handle exists (File System Access API)
+      if (activeFolder.handle && activeFolder.handle.kind === 'directory') {
+        try {
+          if ('queryPermission' in activeFolder.handle) {
+            const handleAny = activeFolder.handle as any;
+            let status = await handleAny.queryPermission({ mode: 'read' });
+            if (status !== 'granted') {
+              status = await handleAny.requestPermission({ mode: 'read' });
+            }
+          }
+          const freshTree = await buildTreeFromDirectoryHandle(activeFolder.handle as FileSystemDirectoryHandle);
+          updatedTree = {
+            ...freshTree,
+            id: activeFolder.id,
+            name: activeFolder.name
+          };
+          showToast('已完成静默刷新，文件夹内容已与磁盘同步！');
+        } catch (e) {
+          console.warn('Directory handle re-scan error:', e);
+        }
+      }
+
+      // 2. Demo folder refresh
+      if (!updatedTree && (activeFolder.id.includes('demo') || activeFolder.name.includes('示例') || activeFolder.name.includes('演示'))) {
+        const demoTree = await getDemoFolderTree();
+        updatedTree = {
+          ...demoTree,
+          id: activeFolder.id,
+          name: activeFolder.name
+        };
+        showToast('演示示例文件夹已重置刷新！');
+      }
+
+      // 3. Standard HTML Input mode / iframe fallback mode:
+      // Web browser sandbox security prevents JS from silently scanning disk directories without a handle.
+      // So we open the folder picker to load the updated directory contents from disk.
+      if (!updatedTree) {
+        folderInputRef.current?.click();
+        showToast('受浏览器安全限制，已为您触发文件夹选择器，请确认以更新磁盘文件变动 (在新标签页中打开可免弹窗静默刷新)。');
+        setIsRefreshing(false);
+        return;
+      }
+
+      if (updatedTree) {
+        setLoadedFolders(prev => prev.map(f => f.id === activeFolder.id ? updatedTree! : f));
+
+        // Re-sync currently selected file or keep selection
+        if (selectedFile) {
+          const allFiles = getAllFiles(updatedTree);
+          const matchingFile = allFiles.find(f => f.path === selectedFile.path || f.name === selectedFile.name);
+          if (matchingFile) {
+            handleSelectFile(matchingFile);
+          } else if (allFiles.length > 0) {
+            handleSelectFile(allFiles[0]);
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Failed to refresh folder:', err);
+    } finally {
+      setTimeout(() => {
+        setIsRefreshing(false);
+      }, 300);
+    }
+  }, [activeFolder, isRefreshing, selectedFile, handleSelectFile, showToast]);
+
   // Handle File(s) Picker with fallback
   const handleOpenFilePicker = async () => {
     let pickerSuccess = false;
 
     try {
-      const isIframe = window.self !== window.top;
-
-      if (!isIframe && 'showOpenFilePicker' in window) {
+      if ('showOpenFilePicker' in window) {
         const handles = await (window as any).showOpenFilePicker({ 
           multiple: true 
         });
@@ -402,10 +488,7 @@ export default function App() {
     let pickerSuccess = false;
 
     try {
-      // Check if inside iframe
-      const isIframe = window.self !== window.top;
-
-      if (!isIframe && 'showDirectoryPicker' in window) {
+      if ('showDirectoryPicker' in window) {
         const dirHandle = await (window as any).showDirectoryPicker();
         const tree = await buildTreeFromDirectoryHandle(dirHandle);
         addFolderToWorkspace(tree);
@@ -418,7 +501,7 @@ export default function App() {
       console.warn('showDirectoryPicker failed or restricted by iframe policy, falling back to standard directory input:', err);
     }
 
-    // Fallback to standard input if showDirectoryPicker failed or was blocked by cross-origin iframe rules
+    // Fallback to standard input if showDirectoryPicker failed or was blocked
     if (!pickerSuccess) {
       folderInputRef.current?.click();
     }
@@ -637,6 +720,8 @@ export default function App() {
         onToggleTheme={() => setTheme(t => t === 'light' ? 'dark' : 'light')}
         showFileTree={showFileTree}
         onToggleFileTree={() => setShowFileTree(v => !v)}
+        onRefreshFolder={handleRefreshFolder}
+        isRefreshing={isRefreshing}
         showOutline={showOutline}
         onToggleOutline={() => setShowOutline(v => !v)}
         hasOutlineItems={outlineItems.length > 0}
@@ -675,6 +760,8 @@ export default function App() {
               onSelectFile={handleSelectFile}
               searchQuery={searchQuery}
               categoryFilter={selectedCategory}
+              onRefreshFolder={handleRefreshFolder}
+              isRefreshing={isRefreshing}
             />
 
             {/* Left Resizer Drag Handle */}
@@ -720,6 +807,18 @@ export default function App() {
             }}
             isResizing={isResizingRight}
           />
+        )}
+        {/* Toast Notification Banner */}
+        {toastMessage && (
+          <div className="fixed bottom-5 right-5 z-50 max-w-md px-4 py-3 bg-zinc-900/90 dark:bg-zinc-100/95 text-zinc-100 dark:text-zinc-900 text-xs sm:text-sm rounded-xl shadow-xl backdrop-blur-md border border-zinc-700/50 dark:border-zinc-300/50 flex items-center justify-between gap-3 animate-in fade-in slide-in-from-bottom-3 duration-200">
+            <span className="leading-relaxed">{toastMessage}</span>
+            <button 
+              onClick={() => setToastMessage(null)}
+              className="text-zinc-400 hover:text-white dark:hover:text-black font-semibold text-base leading-none p-1"
+            >
+              ×
+            </button>
+          </div>
         )}
       </div>
     </div>

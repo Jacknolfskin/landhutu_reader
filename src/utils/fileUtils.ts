@@ -90,7 +90,8 @@ export function buildTreeFromFiles(files: File[]): FileNode {
     path: '',
     kind: 'directory',
     isExpanded: true,
-    children: []
+    children: [],
+    sourceFiles: files
   };
 
   const isFolderUpload = Boolean(firstRelPath && firstRelPath.includes('/'));

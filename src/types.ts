@@ -23,6 +23,7 @@ export interface FileNode {
   lastModified?: number;
   handle?: FileSystemFileHandle | FileSystemDirectoryHandle;
   fileObject?: File;
+  sourceFiles?: File[];
   content?: string | ArrayBuffer;
   children?: FileNode[];
   isExpanded?: boolean;

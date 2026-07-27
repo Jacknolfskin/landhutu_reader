@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
@@ -46,7 +46,7 @@ interface CodeBlockProps {
   codeString: string;
 }
 
-const CodeBlock: React.FC<CodeBlockProps> = ({ language, codeString }) => {
+const CodeBlockComponent: React.FC<CodeBlockProps> = ({ language, codeString }) => {
   const [copied, setCopied] = useState(false);
 
   const fallbackCopy = () => {
@@ -155,12 +155,14 @@ const CodeBlock: React.FC<CodeBlockProps> = ({ language, codeString }) => {
   );
 };
 
-const MarkdownViewerBase: React.FC<MarkdownViewerProps> = ({
+const CodeBlock = React.memo(CodeBlockComponent);
+
+const MarkdownViewerComponent: React.FC<MarkdownViewerProps> = ({
   fileNode,
   content,
   theme = 'light'
 }) => {
-  const stats = calculateDocumentStats(content);
+  const stats = useMemo(() => calculateDocumentStats(content), [content]);
 
   // Track occurrences of heading slugs for deterministic ID creation matching outlineExtractor
   const slugCounts = new Map<string, number>();
@@ -468,8 +470,4 @@ const MarkdownViewerBase: React.FC<MarkdownViewerProps> = ({
   );
 };
 
-// Memoize so that resizing sidebars (which re-renders App) does NOT re-parse
-// the markdown / re-highlight code blocks on every mousemove. Props
-// (fileNode, content, theme) are stable during a resize, so the memoized
-// component skips re-rendering entirely.
-export const MarkdownViewer = React.memo(MarkdownViewerBase);
+export const MarkdownViewer = React.memo(MarkdownViewerComponent);

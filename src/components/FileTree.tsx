@@ -12,7 +12,8 @@ import {
   File, 
   ChevronRight, 
   ChevronDown, 
-  ChevronsUpDown
+  ChevronsUpDown,
+  RotateCw
 } from 'lucide-react';
 import { FileCategory, FileNode } from '../types';
 import { formatFileSize } from '../utils/fileUtils';
@@ -29,9 +30,11 @@ interface FileTreeProps {
   onSelectFile: (file: FileNode) => void;
   searchQuery: string;
   categoryFilter: FileCategory | 'all';
+  onRefreshFolder?: () => void;
+  isRefreshing?: boolean;
 }
 
-export const FileTree: React.FC<FileTreeProps> = ({
+const FileTreeComponent: React.FC<FileTreeProps> = ({
   rootNode,
   loadedFolders = [],
   activeFolderId,
@@ -42,7 +45,9 @@ export const FileTree: React.FC<FileTreeProps> = ({
   selectedFileId,
   onSelectFile,
   searchQuery,
-  categoryFilter
+  categoryFilter,
+  onRefreshFolder,
+  isRefreshing = false
 }) => {
   const [expandedFolderIds, setExpandedFolderIds] = useState<Record<string, boolean>>({});
 
@@ -181,24 +186,36 @@ export const FileTree: React.FC<FileTreeProps> = ({
           <span className="truncate text-zinc-700 dark:text-zinc-300 font-medium">
             {rootNode.name}
           </span>
-          <button
-            onClick={() => {
-              const allExpanded = Object.values(expandedFolderIds).every(Boolean);
-              const newState: Record<string, boolean> = {};
-              const setAll = (node: FileNode) => {
-                if (node.kind === 'directory') {
-                  newState[node.id] = !allExpanded;
-                  node.children?.forEach(setAll);
-                }
-              };
-              setAll(rootNode);
-              setExpandedFolderIds(newState);
-            }}
-            className="p-1 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 rounded hover:bg-zinc-200 dark:hover:bg-zinc-800 transition-colors"
-            title="展开 / 折叠所有文件夹"
-          >
-            <ChevronsUpDown className="w-3.5 h-3.5" />
-          </button>
+          <div className="flex items-center gap-1">
+            {onRefreshFolder && (
+              <button
+                onClick={onRefreshFolder}
+                disabled={isRefreshing}
+                className="p-1 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 rounded hover:bg-zinc-200 dark:hover:bg-zinc-800 transition-colors disabled:opacity-40"
+                title="刷新文件夹获取最新文件"
+              >
+                <RotateCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-blue-500' : ''}`} />
+              </button>
+            )}
+            <button
+              onClick={() => {
+                const allExpanded = Object.values(expandedFolderIds).every(Boolean);
+                const newState: Record<string, boolean> = {};
+                const setAll = (node: FileNode) => {
+                  if (node.kind === 'directory') {
+                    newState[node.id] = !allExpanded;
+                    node.children?.forEach(setAll);
+                  }
+                };
+                setAll(rootNode);
+                setExpandedFolderIds(newState);
+              }}
+              className="p-1 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 rounded hover:bg-zinc-200 dark:hover:bg-zinc-800 transition-colors"
+              title="展开 / 折叠所有文件夹"
+            >
+              <ChevronsUpDown className="w-3.5 h-3.5" />
+            </button>
+          </div>
         </div>
       )}
 
@@ -215,4 +232,6 @@ export const FileTree: React.FC<FileTreeProps> = ({
     </div>
   );
 };
+
+export const FileTree = React.memo(FileTreeComponent);
 

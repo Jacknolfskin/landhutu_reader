@@ -34,7 +34,7 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
           </h1>
 
           <p className="text-sm text-zinc-500 dark:text-zinc-400 max-w-md mx-auto leading-relaxed">
-            极简离线阅读体验，即刻解析Markdown、Office、PDF、图片、音视频及代码大纲。
+            极简离线阅读体验。点击选择<b>本地文件或文件夹</b>，也可直接<b>将文件/文件夹拖拽至窗口</b>，即刻解析 Markdown、Word、Excel、图片、音视频及代码大纲。
           </p>
         </div>
 

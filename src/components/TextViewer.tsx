@@ -39,7 +39,7 @@ const getLanguageFromFileName = (filename: string): string => {
   return langMap[ext] || 'text';
 };
 
-export const TextViewer: React.FC<TextViewerProps> = ({ fileNode, content, theme = 'dark' }) => {
+const TextViewerComponent: React.FC<TextViewerProps> = ({ fileNode, content, theme = 'dark' }) => {
   const [copied, setCopied] = useState<boolean>(false);
 
   const lines = (content || '').split('\n');
@@ -166,4 +166,6 @@ export const TextViewer: React.FC<TextViewerProps> = ({ fileNode, content, theme
     </div>
   );
 };
+
+export const TextViewer = React.memo(TextViewerComponent);
 

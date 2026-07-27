@@ -5,6 +5,7 @@ import {
   Sun, 
   Moon, 
   Sidebar, 
+  RotateCw,
   ListTree, 
   FileText, 
   FileSpreadsheet, 
@@ -42,6 +43,8 @@ interface HeaderProps {
   onToggleTheme: () => void;
   showFileTree: boolean;
   onToggleFileTree: () => void;
+  onRefreshFolder?: () => void;
+  isRefreshing?: boolean;
   showOutline: boolean;
   onToggleOutline: () => void;
   hasOutlineItems: boolean;
@@ -64,6 +67,8 @@ export const Header: React.FC<HeaderProps> = ({
   onToggleTheme,
   showFileTree,
   onToggleFileTree,
+  onRefreshFolder,
+  isRefreshing = false,
   showOutline,
   onToggleOutline,
   hasOutlineItems
@@ -108,7 +113,7 @@ export const Header: React.FC<HeaderProps> = ({
                 ? 'bg-zinc-200/70 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100' 
                 : 'text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800/60'
             }`}
-            title={showFileTree ? "隐藏文件列表" : "显示文件列表"}
+            title={showFileTree ? "隐藏侧边栏" : "展开侧边栏"}
           >
             <Sidebar className="w-4 h-4" />
           </button>

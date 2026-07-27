@@ -27,7 +27,7 @@ interface OutlineSidebarProps {
   isResizing?: boolean;
 }
 
-export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
+const OutlineSidebarComponent: React.FC<OutlineSidebarProps> = ({
   outlineItems,
   activeHeadingId,
   onSelectHeading,
@@ -266,4 +266,6 @@ export const OutlineSidebar: React.FC<OutlineSidebarProps> = ({
     </aside>
   );
 };
+
+export const OutlineSidebar = React.memo(OutlineSidebarComponent);
 
