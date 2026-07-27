@@ -41,6 +41,7 @@ const OutlineSidebarComponent: React.FC<OutlineSidebarProps> = ({
 }) => {
   const [filterQuery, setFilterQuery] = useState<string>('');
   const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
+  const listContainerRef = React.useRef<HTMLDivElement>(null);
 
   // Find all items that have children (sub-headings)
   const parentItemIds = useMemo(() => {
@@ -56,6 +57,46 @@ const OutlineSidebarComponent: React.FC<OutlineSidebarProps> = ({
   const parentSet = useMemo(() => new Set(parentItemIds), [parentItemIds]);
 
   const isAllCollapsed = parentItemIds.length > 0 && parentItemIds.every(id => collapsedIds.has(id));
+
+  // Auto expand collapsed parent headings if active heading is hidden inside them
+  useEffect(() => {
+    if (!activeHeadingId || outlineItems.length === 0) return;
+    const activeIndex = outlineItems.findIndex(item => item.elementId === activeHeadingId);
+    if (activeIndex < 0) return;
+
+    const ancestorsToExpand: string[] = [];
+    let currentLevel = outlineItems[activeIndex].level;
+    for (let j = activeIndex - 1; j >= 0; j--) {
+      if (outlineItems[j].level < currentLevel) {
+        ancestorsToExpand.push(outlineItems[j].id);
+        currentLevel = outlineItems[j].level;
+        if (currentLevel === 1) break;
+      }
+    }
+
+    if (ancestorsToExpand.length > 0) {
+      setCollapsedIds(prev => {
+        let changed = false;
+        const next = new Set(prev);
+        ancestorsToExpand.forEach(id => {
+          if (next.has(id)) {
+            next.delete(id);
+            changed = true;
+          }
+        });
+        return changed ? next : prev;
+      });
+    }
+  }, [activeHeadingId, outlineItems]);
+
+  // Auto scroll active outline item into view in sidebar list
+  useEffect(() => {
+    if (!activeHeadingId || !listContainerRef.current) return;
+    const activeEl = listContainerRef.current.querySelector(`[data-outline-id="${activeHeadingId}"]`);
+    if (activeEl) {
+      activeEl.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }
+  }, [activeHeadingId]);
 
   const handleToggleExpandAll = () => {
     if (isAllCollapsed) {
@@ -180,7 +221,7 @@ const OutlineSidebarComponent: React.FC<OutlineSidebarProps> = ({
       )}
 
       {/* Outline Items Tree */}
-      <div className="flex-1 overflow-y-auto p-2 space-y-0.5 custom-scrollbar">
+      <div ref={listContainerRef} className="flex-1 overflow-y-auto p-2 space-y-0.5 custom-scrollbar">
         {visibleItems.length === 0 ? (
           <div className="p-6 text-center text-xs text-zinc-400">
             {outlineItems.length === 0 ? '该文档未检测到 H1-H6 标题大纲' : '未找到匹配的大纲标题'}
@@ -198,6 +239,7 @@ const OutlineSidebarComponent: React.FC<OutlineSidebarProps> = ({
             return (
               <div
                 key={item.id}
+                data-outline-id={item.elementId}
                 onClick={() => onSelectHeading(item.elementId, item.text)}
                 className={`group flex items-center gap-2 py-2 pr-3 rounded-xl text-xs cursor-pointer transition-all ${
                   isActive

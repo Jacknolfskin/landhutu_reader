@@ -8,13 +8,108 @@ import { calculateDocumentStats } from '../utils/outlineExtractor';
 interface WordViewerProps {
   fileNode: FileNode;
   onOutlineExtracted?: (htmlContent: string) => void;
+  activeHeadingId?: string | null;
+  onSelectHeading?: (elementId: string, headingText?: string) => void;
+  onHeadingIntersect?: (elementId: string) => void;
 }
 
-export const WordViewer: React.FC<WordViewerProps> = ({ fileNode, onOutlineExtracted }) => {
+export const WordViewer: React.FC<WordViewerProps> = ({ 
+  fileNode, 
+  onOutlineExtracted,
+  activeHeadingId,
+  onSelectHeading,
+  onHeadingIntersect
+}) => {
   const [htmlContent, setHtmlContent] = useState<string>('');
   const [rawText, setRawText] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+
+  const scrollContainerRef = React.useRef<HTMLDivElement>(null);
+  const wordContentRef = React.useRef<HTMLDivElement>(null);
+
+  // Click handler to sync outline position when clicking on content or headings
+  const handleContentClick = (e: React.MouseEvent) => {
+    if (!onSelectHeading) return;
+    const target = e.target as HTMLElement;
+    if (target.closest('a') || target.closest('button')) return;
+
+    // Direct heading click
+    const headingEl = target.closest('h1[id], h2[id], h3[id], h4[id], h5[id], h6[id]') as HTMLElement | null;
+    if (headingEl && headingEl.id) {
+      onSelectHeading(headingEl.id);
+      return;
+    }
+
+    // Click on paragraph content - find preceding heading
+    const wordDiv = wordContentRef.current;
+    if (!wordDiv) return;
+    const headings = Array.from(wordDiv.querySelectorAll('h1[id], h2[id], h3[id], h4[id], h5[id], h6[id]')) as HTMLElement[];
+    if (headings.length === 0) return;
+
+    const targetRect = target.getBoundingClientRect();
+    let closestHeading: HTMLElement | null = null;
+
+    for (const heading of headings) {
+      const rect = heading.getBoundingClientRect();
+      if (rect.top <= targetRect.top + 30) {
+        closestHeading = heading;
+      } else {
+        break;
+      }
+    }
+
+    if (!closestHeading && headings.length > 0) {
+      closestHeading = headings[0];
+    }
+
+    if (closestHeading && closestHeading.id) {
+      onSelectHeading(closestHeading.id);
+    }
+  };
+
+  // Scroll listener to update active heading in outline as user scrolls through Word document
+  useEffect(() => {
+    const scrollContainer = scrollContainerRef.current;
+    const wordDiv = wordContentRef.current;
+    if (!scrollContainer || !wordDiv || !onHeadingIntersect) return;
+
+    let ticking = false;
+
+    const handleScroll = () => {
+      if (!ticking) {
+        requestAnimationFrame(() => {
+          ticking = false;
+          const headings = Array.from(wordDiv.querySelectorAll('h1[id], h2[id], h3[id], h4[id], h5[id], h6[id]')) as HTMLElement[];
+          if (headings.length === 0) return;
+
+          const containerTop = scrollContainer.getBoundingClientRect().top;
+          let currentHeadingId: string | null = null;
+
+          for (const heading of headings) {
+            const rect = heading.getBoundingClientRect();
+            if (rect.top - containerTop <= 140) {
+              currentHeadingId = heading.id;
+            } else {
+              break;
+            }
+          }
+
+          if (!currentHeadingId && headings.length > 0) {
+            currentHeadingId = headings[0].id;
+          }
+
+          if (currentHeadingId && currentHeadingId !== activeHeadingId) {
+            onHeadingIntersect(currentHeadingId);
+          }
+        });
+        ticking = true;
+      }
+    };
+
+    scrollContainer.addEventListener('scroll', handleScroll, { passive: true });
+    return () => scrollContainer.removeEventListener('scroll', handleScroll);
+  }, [htmlContent, onHeadingIntersect, activeHeadingId]);
 
   useEffect(() => {
     let isMounted = true;
@@ -105,7 +200,7 @@ export const WordViewer: React.FC<WordViewerProps> = ({ fileNode, onOutlineExtra
   }
 
   return (
-    <div className="flex-1 overflow-y-auto bg-zinc-100/50 dark:bg-zinc-950/60 p-6 sm:p-10 custom-scrollbar">
+    <div ref={scrollContainerRef} className="flex-1 overflow-y-auto bg-zinc-100/50 dark:bg-zinc-950/60 p-6 sm:p-10 custom-scrollbar">
       {/* Paper container */}
       <div className="max-w-4xl mx-auto bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-xs overflow-hidden">
         {/* Document Metadata header */}
@@ -145,7 +240,9 @@ export const WordViewer: React.FC<WordViewerProps> = ({ fileNode, onOutlineExtra
 
         {/* Word Document Body */}
         <div 
-          className="p-8 sm:p-12 prose dark:prose-invert max-w-none text-zinc-800 dark:text-zinc-200 leading-relaxed word-content"
+          ref={wordContentRef}
+          onClick={handleContentClick}
+          className="p-8 sm:p-12 prose dark:prose-invert max-w-none text-zinc-800 dark:text-zinc-200 leading-relaxed word-content cursor-pointer"
           dangerouslySetInnerHTML={{ __html: htmlContent }}
         />
       </div>

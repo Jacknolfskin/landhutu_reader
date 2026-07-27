@@ -560,7 +560,7 @@ export default function App() {
   };
 
   // Load Built-in Demo Folder
-  const handleLoadDemoFolder = async () => {
+  const handleLoadDemoFolder = useCallback(async () => {
     const demoTree = await getDemoFolderTree();
     addFolderToWorkspace(demoTree);
     if (demoTree.children && demoTree.children.length > 0) {
@@ -569,22 +569,51 @@ export default function App() {
         handleSelectFile(readme);
       }
     }
-  };
+  }, [addFolderToWorkspace, handleSelectFile]);
 
   // Word viewer extracts HTML outline callback
-  const handleWordOutlineExtracted = (htmlContent: string) => {
+  const handleWordOutlineExtracted = useCallback((htmlContent: string) => {
     const wordOutline = extractHtmlOutline(htmlContent);
     setOutlineItems(wordOutline);
-  };
+  }, []);
 
   // PPT viewer extracts outline callback
-  const handlePptOutlineExtracted = (items: OutlineItem[]) => {
+  const handlePptOutlineExtracted = useCallback((items: OutlineItem[]) => {
     setOutlineItems(items);
-  };
+  }, []);
+
+  // Callback handlers memoized for optimal performance during resizing
+  const handleToggleTheme = useCallback(() => setTheme(t => t === 'light' ? 'dark' : 'light'), []);
+  const handleToggleFileTree = useCallback(() => setShowFileTree(v => !v), []);
+  const handleToggleOutline = useCallback(() => setShowOutline(v => !v), []);
+  const handleCloseOutline = useCallback(() => setShowOutline(false), []);
+  const handleResetOutlineWidth = useCallback(() => {
+    setOutlineWidth(288);
+    localStorage.setItem('outlineWidth', '288');
+  }, []);
+  const handleResetFileTreeWidth = useCallback(() => {
+    setFileTreeWidth(256);
+    localStorage.setItem('fileTreeWidth', '256');
+  }, []);
+
+  const isProgrammaticScrollRef = useRef<boolean>(false);
+  const scrollLockTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const handleHeadingIntersect = useCallback((elementId: string) => {
+    if (isProgrammaticScrollRef.current) return;
+    setActiveHeadingId(elementId);
+  }, []);
 
   // Jump to heading in view with multi-level fallbacks
-  const handleSelectHeading = (elementId: string, headingText?: string) => {
+  const handleSelectHeading = useCallback((elementId: string, headingText?: string) => {
     setActiveHeadingId(elementId);
+
+    // Lock automatic scroll intersection updates during smooth scrolling jump
+    isProgrammaticScrollRef.current = true;
+    if (scrollLockTimeoutRef.current) clearTimeout(scrollLockTimeoutRef.current);
+    scrollLockTimeoutRef.current = setTimeout(() => {
+      isProgrammaticScrollRef.current = false;
+    }, 800);
 
     // 1. Direct ID lookup
     let element = document.getElementById(elementId);
@@ -608,7 +637,7 @@ export default function App() {
     if (element) {
       element.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
-  };
+  }, []);
 
   // Render appropriate viewer based on file category
   const renderViewer = () => {
@@ -623,12 +652,24 @@ export default function App() {
 
     switch (selectedFile.category) {
       case 'markdown':
-        return <MarkdownViewer fileNode={selectedFile} content={fileContent} theme={theme} />;
+        return (
+          <MarkdownViewer 
+            fileNode={selectedFile} 
+            content={fileContent} 
+            theme={theme} 
+            activeHeadingId={activeHeadingId}
+            onSelectHeading={handleSelectHeading}
+            onHeadingIntersect={handleHeadingIntersect}
+          />
+        );
       case 'word':
         return (
           <WordViewer 
             fileNode={selectedFile} 
             onOutlineExtracted={handleWordOutlineExtracted} 
+            activeHeadingId={activeHeadingId}
+            onSelectHeading={handleSelectHeading}
+            onHeadingIntersect={handleHeadingIntersect}
           />
         );
       case 'excel':
@@ -717,13 +758,13 @@ export default function App() {
         selectedCategory={selectedCategory}
         onCategoryChange={setSelectedCategory}
         theme={theme}
-        onToggleTheme={() => setTheme(t => t === 'light' ? 'dark' : 'light')}
+        onToggleTheme={handleToggleTheme}
         showFileTree={showFileTree}
-        onToggleFileTree={() => setShowFileTree(v => !v)}
+        onToggleFileTree={handleToggleFileTree}
         onRefreshFolder={handleRefreshFolder}
         isRefreshing={isRefreshing}
         showOutline={showOutline}
-        onToggleOutline={() => setShowOutline(v => !v)}
+        onToggleOutline={handleToggleOutline}
         hasOutlineItems={outlineItems.length > 0}
       />
 
@@ -767,10 +808,7 @@ export default function App() {
             {/* Left Resizer Drag Handle */}
             <div
               onMouseDown={handleLeftResizeStart}
-              onDoubleClick={() => {
-                setFileTreeWidth(256);
-                localStorage.setItem('fileTreeWidth', '256');
-              }}
+              onDoubleClick={handleResetFileTreeWidth}
               className="absolute top-0 -right-1.5 w-3 h-full cursor-col-resize z-30 flex justify-center"
               title="拖拽调节侧边栏宽度，双击恢复默认"
             >
@@ -786,7 +824,7 @@ export default function App() {
         )}
 
         {/* Center: File Content Viewer */}
-        <main className="flex-1 flex flex-col min-w-0 h-full overflow-hidden relative">
+        <main className={`flex-1 flex flex-col min-w-0 h-full overflow-hidden relative ${(isResizingLeft || isResizingRight) ? 'pointer-events-none select-none' : ''}`}>
           {renderViewer()}
         </main>
 
@@ -798,13 +836,10 @@ export default function App() {
             onSelectHeading={handleSelectHeading}
             stats={fileStats}
             fileName={selectedFile.name}
-            onClose={() => setShowOutline(false)}
+            onClose={handleCloseOutline}
             width={outlineWidth}
             onResizeStart={handleRightResizeStart}
-            onResetWidth={() => {
-              setOutlineWidth(288);
-              localStorage.setItem('outlineWidth', '288');
-            }}
+            onResetWidth={handleResetOutlineWidth}
             isResizing={isResizingRight}
           />
         )}
