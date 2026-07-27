@@ -30,14 +30,22 @@ export const WordViewer: React.FC<WordViewerProps> = ({
 
   // Click handler to sync outline position when clicking on content or headings
   const handleContentClick = (e: React.MouseEvent) => {
-    if (!onSelectHeading) return;
+    // Ignore text selection
+    const selection = window.getSelection();
+    if (selection && selection.toString().trim().length > 0) {
+      return;
+    }
+
+    if (!onHeadingIntersect && !onSelectHeading) return;
     const target = e.target as HTMLElement;
     if (target.closest('a') || target.closest('button')) return;
 
     // Direct heading click
     const headingEl = target.closest('h1[id], h2[id], h3[id], h4[id], h5[id], h6[id]') as HTMLElement | null;
     if (headingEl && headingEl.id) {
-      onSelectHeading(headingEl.id);
+      if (onHeadingIntersect) {
+        onHeadingIntersect(headingEl.id);
+      }
       return;
     }
 
@@ -64,7 +72,9 @@ export const WordViewer: React.FC<WordViewerProps> = ({
     }
 
     if (closestHeading && closestHeading.id) {
-      onSelectHeading(closestHeading.id);
+      if (onHeadingIntersect) {
+        onHeadingIntersect(closestHeading.id);
+      }
     }
   };
 
