@@ -198,13 +198,28 @@ export default function App() {
   useEffect(() => {
     if (!isResizingLeft) return;
 
+    let rafId = 0;
+    let lastWidth = 0;
+
     const handleMouseMove = (e: MouseEvent) => {
       const newWidth = Math.min(Math.max(160, e.clientX), Math.min(600, window.innerWidth * 0.45));
-      setFileTreeWidth(newWidth);
-      localStorage.setItem('fileTreeWidth', newWidth.toString());
+      lastWidth = newWidth;
+      // Coalesce multiple mousemoves into a single render per animation frame
+      // so dragging stays smooth even with a large markdown document open.
+      if (!rafId) {
+        rafId = requestAnimationFrame(() => {
+          rafId = 0;
+          setFileTreeWidth(lastWidth);
+        });
+      }
     };
 
     const handleMouseUp = () => {
+      if (rafId) cancelAnimationFrame(rafId);
+      if (lastWidth > 0) {
+        setFileTreeWidth(lastWidth);
+        localStorage.setItem('fileTreeWidth', lastWidth.toString());
+      }
       setIsResizingLeft(false);
     };
 
@@ -213,6 +228,7 @@ export default function App() {
     return () => {
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
+      if (rafId) cancelAnimationFrame(rafId);
     };
   }, [isResizingLeft]);
 
@@ -225,13 +241,26 @@ export default function App() {
   useEffect(() => {
     if (!isResizingRight) return;
 
+    let rafId = 0;
+    let lastWidth = 0;
+
     const handleMouseMove = (e: MouseEvent) => {
       const newWidth = Math.min(Math.max(180, window.innerWidth - e.clientX), Math.min(600, window.innerWidth * 0.45));
-      setOutlineWidth(newWidth);
-      localStorage.setItem('outlineWidth', newWidth.toString());
+      lastWidth = newWidth;
+      if (!rafId) {
+        rafId = requestAnimationFrame(() => {
+          rafId = 0;
+          setOutlineWidth(lastWidth);
+        });
+      }
     };
 
     const handleMouseUp = () => {
+      if (rafId) cancelAnimationFrame(rafId);
+      if (lastWidth > 0) {
+        setOutlineWidth(lastWidth);
+        localStorage.setItem('outlineWidth', lastWidth.toString());
+      }
       setIsResizingRight(false);
     };
 
@@ -240,6 +269,7 @@ export default function App() {
     return () => {
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
+      if (rafId) cancelAnimationFrame(rafId);
     };
   }, [isResizingRight]);
 

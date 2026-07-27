@@ -155,7 +155,7 @@ const CodeBlock: React.FC<CodeBlockProps> = ({ language, codeString }) => {
   );
 };
 
-export const MarkdownViewer: React.FC<MarkdownViewerProps> = ({
+const MarkdownViewerBase: React.FC<MarkdownViewerProps> = ({
   fileNode,
   content,
   theme = 'light'
@@ -467,3 +467,9 @@ export const MarkdownViewer: React.FC<MarkdownViewerProps> = ({
     </div>
   );
 };
+
+// Memoize so that resizing sidebars (which re-renders App) does NOT re-parse
+// the markdown / re-highlight code blocks on every mousemove. Props
+// (fileNode, content, theme) are stable during a resize, so the memoized
+// component skips re-rendering entirely.
+export const MarkdownViewer = React.memo(MarkdownViewerBase);
