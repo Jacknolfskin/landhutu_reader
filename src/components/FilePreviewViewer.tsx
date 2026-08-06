@@ -37,13 +37,55 @@ interface FilePreviewViewerProps {
   appTheme?: ThemeMode;
 }
 
+/** Check whether a string is a remote http(s) URL. */
+function isRemoteUrl(value: string): boolean {
+  return /^https?:\/\//i.test(value.trim());
+}
+
 /**
- * Resolve a browser-usable file source (File / Blob / ArrayBuffer) from a FileNode.
- * Returns null when no binary data can be obtained.
+ * Convert a data: URI (e.g. a base64 PDF or an inline SVG) into a Blob.
+ * Returns null when the string is not a valid data URI.
+ */
+function dataUriToBlob(dataUri: string): Blob | null {
+  const match = /^data:([^;,]+)?(;base64)?,(.*)$/s.exec(dataUri.trim());
+  if (!match) return null;
+
+  const mimeType = match[1] || 'text/plain';
+  const isBase64 = Boolean(match[2]);
+  const payload = match[3];
+
+  try {
+    if (isBase64) {
+      const binary = atob(payload.replace(/\s+/g, ''));
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) {
+        bytes[i] = binary.charCodeAt(i);
+      }
+      return new Blob([bytes], { type: mimeType });
+    }
+
+    return new Blob([decodeURIComponent(payload)], { type: mimeType });
+  } catch (err) {
+    console.warn('FilePreviewViewer: data URI 解析失败', err);
+    return null;
+  }
+}
+
+/**
+ * Resolve a browser-usable file source (File / Blob / ArrayBuffer / URL string)
+ * from a FileNode. Returns null when no binary data can be obtained.
+ *
+ * A string `content` may be:
+ *  - a remote http(s) URL. For media (audio/video) we pass the URL through to
+ *    the SDK directly — <audio>/<video> elements load cross-origin media
+ *    natively without needing CORS. For every other type the SDK has to read
+ *    the bytes, so we fetch it into a Blob first (the server must allow CORS).
+ *  - a data: URI               -> decoded into a Blob;
+ *  - plain text content        -> encoded as an ArrayBuffer (legacy behaviour).
  */
 async function resolveFileSource(
   fileNode: FileNode
-): Promise<File | Blob | ArrayBuffer | null> {
+): Promise<File | Blob | ArrayBuffer | string | null> {
   if (fileNode.fileObject) {
     return fileNode.fileObject;
   }
@@ -58,6 +100,40 @@ async function resolveFileSource(
 
   if (fileNode.content) {
     if (typeof fileNode.content === 'string') {
+      const trimmed = fileNode.content.trim();
+
+      // Remote media (audio/video): hand the URL to the SDK unchanged. Native
+      // media elements can play cross-origin files without a CORS header.
+      if (
+        isRemoteUrl(trimmed) &&
+        (fileNode.category === 'audio' || fileNode.category === 'video')
+      ) {
+        return trimmed;
+      }
+
+      // Other remote files: fetch into a Blob so the previewer can read them.
+      // The server must allow CORS; if it doesn't, we fail gracefully below.
+      if (isRemoteUrl(trimmed)) {
+        try {
+          const res = await fetch(trimmed);
+          if (!res.ok) {
+            throw new Error(`HTTP ${res.status}`);
+          }
+          return await res.blob();
+        } catch (err) {
+          console.warn('FilePreviewViewer: 远程文件拉取失败', trimmed, err);
+          throw new Error(
+            '远程文件拉取失败，请检查网络或目标地址是否允许跨域 (CORS)。'
+          );
+        }
+      }
+
+      // Data URI: decode into a Blob.
+      const blob = dataUriToBlob(trimmed);
+      if (blob) {
+        return blob;
+      }
+
       return new TextEncoder().encode(fileNode.content).buffer;
     }
     return fileNode.content;
@@ -71,7 +147,7 @@ export const FilePreviewViewer: React.FC<FilePreviewViewerProps> = ({
   appTheme,
 }) => {
   const [fileSource, setFileSource] = useState<
-    File | Blob | ArrayBuffer | null
+    File | Blob | ArrayBuffer | string | null
   >(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -166,17 +242,20 @@ export const FilePreviewViewer: React.FC<FilePreviewViewerProps> = ({
             支持的格式：
           </p>
           <ul className="list-disc list-inside space-y-1 text-zinc-500">
-            <li>Office: Word / Excel / PowerPoint (.doc/.docx/.xls/.xlsx/.ppt/.pptx 等)</li>
-            <li>PDF / EPUB / XPS / OFD: .pdf / .epub / .xps / .ofd</li>
-            <li>图片: .png / .jpg / .gif / .svg / .webp / .bmp / .ico / .avif</li>
-            <li>视频: .mp4 / .webm / .ogg / .mov / .mkv / .avi 等</li>
-            <li>音频: .mp3 / .wav / .aac / .flac / .m4a 等</li>
-            <li>文本/代码: .txt / .json / .js / .ts / .html / .css / .py 等</li>
-            <li>压缩包: .zip / .tar / .gz 等</li>
-            <li>邮件: .eml / .msg</li>
-            <li>设计/思维导图: .psd / .ai / .xmind</li>
-            <li>CAD: .dwg / .dwf</li>
-            <li>3D 模型 / GIS / 其他资源文件</li>
+            <li>Word: .docx / .doc / .docm / .rtf / .odt / .fodt / .dotx / .wps</li>
+            <li>表格: .xlsx / .xls / .xlsm / .xlsb / .csv / .tsv / .ods / .numbers</li>
+            <li>演示: .pptx / .ppt / .pptm / .ppsx / .odp / .fodp / .key</li>
+            <li>PDF / EPUB / XPS / OFD: .pdf / .epub / .xps / .oxps / .ofd</li>
+            <li>图片: .jpg / .png / .gif / .webp / .svg / .bmp / .ico / .tif / .avif / .jxl / .heic</li>
+            <li>视频: .mp4 / .webm / .mov / .mkv / .avi / .flv / .wmv / .m3u8 等</li>
+            <li>音频: .mp3 / .wav / .aac / .flac / .m4a / .ogg / .opus 等</li>
+            <li>文本/代码: .txt / .json / .js / .ts / .html / .css / .py / .md 等</li>
+            <li>压缩包: .zip / .rar / .7z / .tar / .gz / .bz2 / .xz</li>
+            <li>邮件: .eml / .msg / .mbox</li>
+            <li>绘图/思维导图: .drawio / .excalidraw / .tldraw / .xmind</li>
+            <li>CAD: .dwg / .dxf / .dwf / .step / .iges / .ifc 等</li>
+            <li>3D模型: .gltf / .glb / .obj / .stl / .fbx / .3mf 等</li>
+            <li>GIS / 其他资源文件: .geojson / .kml / .gpx / 字体等</li>
           </ul>
         </div>
       </div>

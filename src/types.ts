@@ -1,16 +1,44 @@
-export type FileCategory = 
-  | 'markdown' 
-  | 'word' 
-  | 'excel' 
-  | 'image' 
-  | 'pdf' 
+export type FileCategory =
+  | 'markdown'
+  | 'word'
+  | 'excel'
+  | 'image'
+  | 'pdf'
   | 'ppt'
   | 'video'
   | 'audio'
-  | 'text' 
-  | 'json' 
-  | 'code' 
+  | 'text'
+  | 'json'
+  | 'code'
+  | 'archive'
+  | 'email'
+  | 'drawing'
+  | 'cad'
+  | 'model3d'
+  | 'gis'
+  | 'asset'
   | 'unknown';
+
+/**
+ * 大分类筛选分组 ID。标题栏据此对文件进行分组筛选。
+ * 每个分组映射到一个或多个细分的 FileCategory。
+ */
+export type CategoryGroupId =
+  | 'all'
+  | 'markdown'
+  | 'office'
+  | 'pdf'
+  | 'image'
+  | 'video'
+  | 'audio'
+  | 'textcode'
+  | 'archive'
+  | 'email'
+  | 'drawing'
+  | 'cad'
+  | 'model3d'
+  | 'gis'
+  | 'asset';
 
 export interface FileNode {
   id: string;

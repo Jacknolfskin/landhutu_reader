@@ -1,37 +1,112 @@
-import { FileCategory, FileNode } from '../types';
+import { FileCategory, CategoryGroupId, FileNode } from '../types';
+
+/**
+ * 大分类 -> 细分类映射，用于标题栏分组筛选。
+ * 每个分组对应一个或多个细分的 FileCategory。
+ */
+export const CATEGORY_GROUPS: Record<Exclude<CategoryGroupId, 'all'>, FileCategory[]> = {
+  markdown: ['markdown'],
+  office: ['word', 'excel', 'ppt'],
+  pdf: ['pdf'],
+  image: ['image'],
+  video: ['video'],
+  audio: ['audio'],
+  textcode: ['text', 'json', 'code'],
+  archive: ['archive'],
+  email: ['email'],
+  drawing: ['drawing'],
+  cad: ['cad'],
+  model3d: ['model3d'],
+  gis: ['gis'],
+  asset: ['asset'],
+};
+
+export const CATEGORY_GROUP_IDS: CategoryGroupId[] = [
+  'all',
+  'markdown',
+  'office',
+  'pdf',
+  'image',
+  'video',
+  'audio',
+  'textcode',
+  'archive',
+  'email',
+  'drawing',
+  'cad',
+  'model3d',
+  'gis',
+  'asset',
+];
 
 export function getFileCategory(filename: string): FileCategory {
   const ext = filename.split('.').pop()?.toLowerCase() || '';
 
-  if (['md', 'markdown', 'mdown', 'mkd'].includes(ext)) {
+  if (['md', 'markdown', 'mdown', 'mkd', 'mmd', 'mermaid'].includes(ext)) {
     return 'markdown';
   }
-  if (['docx', 'doc'].includes(ext)) {
+  // Word 文档（含 RTF / ODT / WPS 等文本处理格式）
+  if (['docx', 'docm', 'doc', 'dotx', 'dotm', 'dot', 'rtf', 'odt', 'fodt', 'wps'].includes(ext)) {
     return 'word';
   }
-  if (['xlsx', 'xls', 'csv'].includes(ext)) {
+  // 表格（含 CSV / TSV / ODS 等）
+  if (['xlsx', 'xls', 'xlsm', 'xlsb', 'xlt', 'xltx', 'xltm', 'csv', 'tsv', 'ods', 'fods', 'numbers', 'et'].includes(ext)) {
     return 'excel';
   }
-  if (['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp', 'bmp', 'ico', 'avif'].includes(ext)) {
+  // 图片
+  if (['jpg', 'jpeg', 'jfif', 'pjpe', 'pjpeg', 'png', 'gif', 'webp', 'avif', 'jxl', 'svg', 'bmp', 'ico', 'cur', 'tif', 'tiff', 'apng', 'heic', 'heif'].includes(ext)) {
     return 'image';
   }
-  if (['mp4', 'webm', 'ogg', 'mov', 'm4v', 'mkv', 'avi', 'flv', 'wmv', '3gp'].includes(ext)) {
+  // 视频
+  if (['mp4', 'mpg', 'mpeg', 'mpe', 'mpv', 'webm', 'ogv', 'mov', 'm4v', 'mkv', 'avi', 'flv', 'wmv', '3gp', '3g2', 'm2ts', 'm3u8'].includes(ext)) {
     return 'video';
   }
-  if (['mp3', 'wav', 'ogg', 'aac', 'flac', 'm4a', 'wma', 'opus', 'weba'].includes(ext)) {
+  // 音频
+  if (['mp3', 'wav', 'aif', 'aiff', 'aifc', 'ogg', 'oga', 'aac', 'm4a', 'flac', 'opus', 'weba', 'amr', 'mid', 'midi', 'caf', 'au', 'snd', 'wma'].includes(ext)) {
     return 'audio';
   }
   if (ext === 'pdf') {
     return 'pdf';
   }
-  if (['pptx', 'ppt', 'pps', 'ppsx', 'pot', 'potx'].includes(ext)) {
+  // 演示文稿
+  if (['pptx', 'pptm', 'ppt', 'pps', 'ppsx', 'ppsm', 'potx', 'potm', 'odp', 'fodp', 'key', 'dps'].includes(ext)) {
     return 'ppt';
   }
-  if (['json', 'js', 'jsx', 'ts', 'tsx', 'html', 'css', 'scss', 'yaml', 'yml', 'xml', 'py', 'java', 'c', 'cpp', 'sh'].includes(ext)) {
+  // 代码文件
+  if (['json', 'jsonc', 'json5', 'ipynb', 'jsonl', 'ndjson', 'xml', 'yaml', 'yml', 'js', 'mjs', 'cjs', 'jsx', 'ts', 'tsx', 'vue', 'html', 'htm', 'css', 'scss', 'less', 'toml', 'ini', 'proto', 'tf', 'tfvars', 'hcl', 'tex', 'latex', 'bib', 'gv', 'http', 'java', 'py', 'go', 'rs', 'rb', 'swift', 'kt', 'kts', 'scala', 'lua', 'r', 'dart', 'svelte', 'astro', 'elm', 'ex', 'exs', 'clj', 'cljs', 'erl', 'hrl', 'fs', 'fsx', 'hs', 'lhs', 'php', 'c', 'cpp', 'h', 'hpp', 'cs', 'sql', 'sh', 'bash', 'zsh', 'fish', 'ps1', 'bat', 'cmd', 'dockerfile', 'nginxconf', 'gradle', 'graphql', 'gql', 'pem', 'crt', 'cer', 'ics', 'vcf', 'diff', 'patch'].includes(ext)) {
     return 'code';
   }
-  if (['txt', 'log', 'env', 'ini', 'conf'].includes(ext)) {
+  // 纯文本 / 配置文件
+  if (['txt', 'log', 'env', 'conf', 'config', 'properties', 'lock'].includes(ext)) {
     return 'text';
+  }
+  // 压缩包
+  if (['zip', 'rar', '7z', 'tar', 'gz', 'tgz', 'bz2', 'xz'].includes(ext)) {
+    return 'archive';
+  }
+  // 邮件
+  if (['eml', 'msg', 'mbox'].includes(ext)) {
+    return 'email';
+  }
+  // 绘图（drawio / excalidraw / tldraw）
+  if (['drawio', 'dio', 'excalidraw', 'tldraw'].includes(ext)) {
+    return 'drawing';
+  }
+  // CAD
+  if (['dxf', 'dwg', 'dwf', 'step', 'stp', 'iges', 'igs', 'ifc', 'sat', 'sab', 'x_t', 'x_b', '3dm', 'skp', 'sldprt', 'sldasm', 'gds', 'gdsii', 'oas', 'oasis'].includes(ext)) {
+    return 'cad';
+  }
+  // 3D 模型
+  if (['gltf', 'glb', 'obj', 'stl', 'fbx', 'dae', 'ply', '3mf', '3ds', 'usd', 'usda', 'usdc', 'usdz', 'wrl', 'vrml'].includes(ext)) {
+    return 'model3d';
+  }
+  // GIS
+  if (['geojson', 'topojson', 'kml', 'kmz', 'gpx', 'shp'].includes(ext)) {
+    return 'gis';
+  }
+  // 其他资源（字体 / 设计源文件 / 数据库 / WASM / 大数据格式等）
+  if (['ttf', 'otf', 'woff', 'woff2', 'eot', 'psd', 'psb', 'ai', 'eps', 'ps', 'webarchive', 'sqlite', 'sqlite3', 'db', 'wasm', 'parquet', 'avro'].includes(ext)) {
+    return 'asset';
   }
 
   return 'unknown';

@@ -44,3 +44,13 @@
   }
 }
 
+/* Fix: 让 Word 文档在预览框中水平居中。
+   第三方库 @open-file-viewer 在 fitDocxPages 中会以内联样式覆盖 wrapper 宽度
+   （将其设为与页面同宽），导致 flex 的 align-items: center 无法生效，
+   页面会紧贴预览框左侧。这里用 !important 强制 wrapper 撑满容器宽度，
+   从而让内部页面在 align-items: center 下实现居中。 */
+.ofv-docx-document .ofv-docx-wrapper {
+  width: 100% !important;
+  max-width: 100% !important;
+}
+

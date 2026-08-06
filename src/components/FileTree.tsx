@@ -13,10 +13,16 @@ import {
   ChevronRight, 
   ChevronDown, 
   ChevronsUpDown,
-  RotateCw
+  RotateCw,
+  Archive,
+  Mail,
+  PenTool,
+  Box,
+  MapPin,
+  Package
 } from 'lucide-react';
-import { FileCategory, FileNode } from '../types';
-import { formatFileSize } from '../utils/fileUtils';
+import { CategoryGroupId, FileCategory, FileNode } from '../types';
+import { CATEGORY_GROUPS, formatFileSize } from '../utils/fileUtils';
 
 interface FileTreeProps {
   rootNode: FileNode | null;
@@ -29,7 +35,7 @@ interface FileTreeProps {
   selectedFileId: string | null;
   onSelectFile: (file: FileNode) => void;
   searchQuery: string;
-  categoryFilter: FileCategory | 'all';
+  categoryFilter: CategoryGroupId;
   onRefreshFolder?: () => void;
   isRefreshing?: boolean;
 }
@@ -86,6 +92,20 @@ const FileTreeComponent: React.FC<FileTreeProps> = ({
       case 'code':
       case 'json':
         return <Code className={`w-3.5 h-3.5 shrink-0 ${isSelected ? 'text-white' : 'text-rose-500'}`} />;
+      case 'archive':
+        return <Archive className={`w-3.5 h-3.5 shrink-0 ${isSelected ? 'text-white' : 'text-stone-500'}`} />;
+      case 'email':
+        return <Mail className={`w-3.5 h-3.5 shrink-0 ${isSelected ? 'text-white' : 'text-sky-500'}`} />;
+      case 'drawing':
+        return <PenTool className={`w-3.5 h-3.5 shrink-0 ${isSelected ? 'text-white' : 'text-cyan-500'}`} />;
+      case 'cad':
+        return <Box className={`w-3.5 h-3.5 shrink-0 ${isSelected ? 'text-white' : 'text-lime-500'}`} />;
+      case 'model3d':
+        return <Box className={`w-3.5 h-3.5 shrink-0 ${isSelected ? 'text-white' : 'text-violet-500'}`} />;
+      case 'gis':
+        return <MapPin className={`w-3.5 h-3.5 shrink-0 ${isSelected ? 'text-white' : 'text-green-500'}`} />;
+      case 'asset':
+        return <Package className={`w-3.5 h-3.5 shrink-0 ${isSelected ? 'text-white' : 'text-zinc-500'}`} />;
       default:
         return <File className={`w-3.5 h-3.5 shrink-0 ${isSelected ? 'text-white' : 'text-zinc-400'}`} />;
     }
@@ -94,7 +114,9 @@ const FileTreeComponent: React.FC<FileTreeProps> = ({
   const matchesSearchAndCategory = (node: FileNode): boolean => {
     if (node.kind === 'file') {
       const nameMatches = !searchQuery || node.name.toLowerCase().includes(searchQuery.toLowerCase());
-      const categoryMatches = categoryFilter === 'all' || node.category === categoryFilter;
+      const categoryMatches =
+        categoryFilter === 'all' ||
+        CATEGORY_GROUPS[categoryFilter].includes(node.category as FileCategory);
       return nameMatches && categoryMatches;
     }
 

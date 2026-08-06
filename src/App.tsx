@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { FileNode, FileCategory, OutlineItem, ThemeMode, FileStats } from './types';
+import { FileNode, CategoryGroupId, OutlineItem, ThemeMode, FileStats } from './types';
 import { getDemoFolderTree } from './utils/demoData';
 import { 
   buildTreeFromDirectoryHandle, 
@@ -38,7 +38,7 @@ export default function App() {
   const [fileStats, setFileStats] = useState<FileStats | undefined>(undefined);
 
   const [searchQuery, setSearchQuery] = useState<string>('');
-  const [selectedCategory, setSelectedCategory] = useState<FileCategory | 'all'>('all');
+  const [selectedCategory, setSelectedCategory] = useState<CategoryGroupId>('all');
   const [theme, setTheme] = useState<ThemeMode>(() => {
     const saved = localStorage.getItem('app-theme');
     if (saved === 'dark' || saved === 'light') return saved;

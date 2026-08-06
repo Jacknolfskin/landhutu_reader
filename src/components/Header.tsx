@@ -21,9 +21,15 @@ import {
   Plus,
   X,
   Trash2,
-  FolderKanban
+  FolderKanban,
+  Archive,
+  Mail,
+  PenTool,
+  Box,
+  MapPin,
+  Package
 } from 'lucide-react';
-import { FileCategory, FileNode, ThemeMode } from '../types';
+import { CategoryGroupId, FileNode, ThemeMode } from '../types';
 import { getAllFiles } from '../utils/fileUtils';
 
 interface HeaderProps {
@@ -37,8 +43,8 @@ interface HeaderProps {
   onLoadDemoFolder: () => void;
   searchQuery: string;
   onSearchChange: (q: string) => void;
-  selectedCategory: FileCategory | 'all';
-  onCategoryChange: (cat: FileCategory | 'all') => void;
+  selectedCategory: CategoryGroupId;
+  onCategoryChange: (cat: CategoryGroupId) => void;
   theme: ThemeMode;
   onToggleTheme: () => void;
   showFileTree: boolean;
@@ -87,17 +93,27 @@ export const Header: React.FC<HeaderProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const categories: { id: FileCategory | 'all'; label: string; icon: React.ReactNode }[] = [
+  const categories: { id: CategoryGroupId; label: string; title?: string; icon: React.ReactNode }[] = [
     { id: 'all', label: '全部', icon: <Layers className="w-3.5 h-3.5" /> },
-    { id: 'markdown', label: 'Markdown', icon: <FileText className="w-3.5 h-3.5 text-blue-500" /> },
-    { id: 'word', label: 'Word', icon: <FileText className="w-3.5 h-3.5 text-indigo-500" /> },
-    { id: 'excel', label: 'Excel/CSV', icon: <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-500" /> },
-    { id: 'pdf', label: 'PDF', icon: <FileText className="w-3.5 h-3.5 text-red-500" /> },
-    { id: 'ppt', label: 'PPT/演示', icon: <Presentation className="w-3.5 h-3.5 text-orange-500" /> },
-    { id: 'image', label: '图片', icon: <ImageIcon className="w-3.5 h-3.5 text-amber-500" /> },
-    { id: 'video', label: '视频', icon: <Video className="w-3.5 h-3.5 text-purple-500" /> },
-    { id: 'audio', label: '音频', icon: <Music className="w-3.5 h-3.5 text-teal-500" /> },
-    { id: 'code', label: '代码/文本', icon: <Code className="w-3.5 h-3.5 text-rose-500" /> },
+    { id: 'markdown', label: 'Markdown', title: '.md / .markdown / .mdown / .mkd / .mmd / .mermaid', icon: <FileText className="w-3.5 h-3.5 text-blue-500" /> },
+    {
+      id: 'office',
+      label: 'Office',
+      title: 'Word: .docx/.doc/.docm/.rtf/.odt/.dotx/.wps  |  表格: .xlsx/.xls/.xlsm/.csv/.tsv/.ods/.numbers  |  演示: .pptx/.ppt/.pptm/.ppsx/.odp/.key',
+      icon: <FileText className="w-3.5 h-3.5 text-indigo-500" />,
+    },
+    { id: 'pdf', label: 'PDF', title: '.pdf / .epub / .xps / .oxps / .ofd', icon: <FileText className="w-3.5 h-3.5 text-red-500" /> },
+    { id: 'image', label: '图片', title: '.jpg/.png/.gif/.webp/.svg/.bmp/.ico/.tif/.tiff/.avif/.jxl/.heic', icon: <ImageIcon className="w-3.5 h-3.5 text-amber-500" /> },
+    { id: 'video', label: '视频', title: '.mp4/.webm/.mov/.mkv/.avi/.flv/.wmv/.m3u8 等', icon: <Video className="w-3.5 h-3.5 text-purple-500" /> },
+    { id: 'audio', label: '音频', title: '.mp3/.wav/.aac/.flac/.m4a/.ogg/.opus 等', icon: <Music className="w-3.5 h-3.5 text-teal-500" /> },
+    { id: 'textcode', label: '文本/代码', title: '.txt/.json/.js/.ts/.html/.css/.py 等', icon: <Code className="w-3.5 h-3.5 text-rose-500" /> },
+    { id: 'archive', label: '压缩包', title: '.zip/.rar/.7z/.tar/.gz/.bz2/.xz', icon: <Archive className="w-3.5 h-3.5 text-stone-500" /> },
+    { id: 'email', label: '邮件', title: '.eml/.msg/.mbox', icon: <Mail className="w-3.5 h-3.5 text-sky-500" /> },
+    { id: 'drawing', label: '绘图', title: '.drawio/.dio/.excalidraw/.tldraw', icon: <PenTool className="w-3.5 h-3.5 text-cyan-500" /> },
+    { id: 'cad', label: 'CAD', title: '.dwg/.dxf/.dwf/.step/.iges/.ifc 等', icon: <Box className="w-3.5 h-3.5 text-lime-500" /> },
+    { id: 'model3d', label: '3D模型', title: '.gltf/.glb/.obj/.stl/.fbx/.3mf/.usdz 等', icon: <Box className="w-3.5 h-3.5 text-violet-500" /> },
+    { id: 'gis', label: 'GIS', title: '.geojson/.topojson/.kml/.kmz/.gpx/.shp', icon: <MapPin className="w-3.5 h-3.5 text-green-500" /> },
+    { id: 'asset', label: '其他资源', title: '字体/.psd/.ai/.eps/.sqlite/.db/.wasm 等', icon: <Package className="w-3.5 h-3.5 text-zinc-500" /> },
   ];
 
   return (
@@ -266,17 +282,26 @@ export const Header: React.FC<HeaderProps> = ({
         <div className="flex items-center gap-1 overflow-x-auto no-scrollbar">
           {categories.map((cat) => {
             const isActive = selectedCategory === cat.id;
+            const activeIcon = React.isValidElement(cat.icon)
+              ? React.cloneElement(
+                  cat.icon as React.ReactElement<{ className?: string }>,
+                  {
+                    className: `${(cat.icon.props as { className?: string }).className ?? ''} ${isActive ? '!text-white' : ''}`,
+                  }
+                )
+              : cat.icon;
             return (
               <button
                 key={cat.id}
                 onClick={() => onCategoryChange(cat.id)}
+                title={cat.title}
                 className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap transition-all ${
                   isActive
                     ? 'bg-[#2b72ee] text-white dark:bg-blue-600 dark:text-white shadow-xs font-medium'
                     : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800/80'
                 }`}
               >
-                {cat.icon}
+                {activeIcon}
                 <span>{cat.label}</span>
               </button>
             );
