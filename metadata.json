@@ -1,5 +1,5 @@
 {
-  "name": "兰德糊涂's Reader",
+  "name": "兰德胡涂's Reader",
   "description": "打开本地文件夹，快速浏览Markdown、Office文档及图片，支持智能文档大纲导航与简约视觉体验",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
