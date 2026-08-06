@@ -26,11 +26,11 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
         {/* Brand Icon & Heading */}
         <div className="space-y-3">
           <div className="inline-flex items-center justify-center p-4 rounded-2xl bg-[#2b72ee]/10 dark:bg-blue-600/10 shadow-md shadow-blue-500/10">
-            <img src="/favicon.svg" alt="兰德糊涂's Reader" className="w-12 h-12" />
+            <img src="/favicon.svg" alt="兰德胡涂's Reader" className="w-12 h-12" />
           </div>
 
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
-            兰德糊涂's Reader
+            兰德胡涂's Reader
           </h1>
 
           <p className="text-sm text-zinc-500 dark:text-zinc-400 max-w-md mx-auto leading-relaxed">
