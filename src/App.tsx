@@ -9,7 +9,6 @@ import {
 } from './utils/fileUtils';
 import { 
   extractMarkdownOutline, 
-  extractHtmlOutline, 
   calculateDocumentStats 
 } from './utils/outlineExtractor';
 import { 
@@ -17,18 +16,12 @@ import {
   saveWorkspaceToStorage, 
   clearWorkspaceStorage 
 } from './utils/storage';
-import { FolderPlus, UploadCloud } from 'lucide-react';
+import { UploadCloud } from 'lucide-react';
 
 import { Header } from './components/Header';
 import { FileTree } from './components/FileTree';
 import { MarkdownViewer } from './components/MarkdownViewer';
-import { WordViewer } from './components/WordViewer';
-import { ExcelViewer } from './components/ExcelViewer';
-import { ImageViewer } from './components/ImageViewer';
-import { PdfViewer } from './components/PdfViewer';
-import { PptViewer } from './components/PptViewer';
-import { TextViewer } from './components/TextViewer';
-import { MediaViewer } from './components/MediaViewer';
+import { FilePreviewViewer } from './components/FilePreviewViewer';
 import { OutlineSidebar } from './components/OutlineSidebar';
 import { WelcomeScreen } from './components/WelcomeScreen';
 import { OpenLocalModal } from './components/OpenLocalModal';
@@ -104,40 +97,28 @@ export default function App() {
     setActiveHeadingId(null);
     setFileContent('');
 
-    if (file.content && typeof file.content === 'string') {
-      // Pre-loaded content
-      setFileContent(file.content);
-      if (file.category === 'markdown') {
-        const outline = extractMarkdownOutline(file.content);
-        setOutlineItems(outline);
-        setFileStats(calculateDocumentStats(file.content));
-      }
+    // Markdown is rendered with a dedicated viewer that needs raw text content
+    // (other file types are rendered by the Open File Viewer SDK directly
+    // from their binary source, so no text loading is needed here).
+    if (file.category !== 'markdown') {
+      setFileStats(undefined);
       return;
     }
 
-    // Read file from handle or fileObject
     let text = '';
     try {
-      if (file.fileObject) {
-        if (['markdown', 'text', 'code', 'json', 'excel'].includes(file.category || '')) {
-          text = await file.fileObject.text();
-        }
+      if (file.content && typeof file.content === 'string') {
+        text = file.content;
+      } else if (file.fileObject) {
+        text = await file.fileObject.text();
       } else if (file.handle && file.handle.kind === 'file') {
         const f = await (file.handle as FileSystemFileHandle).getFile();
-        if (['markdown', 'text', 'code', 'json', 'excel'].includes(file.category || '')) {
-          text = await f.text();
-        }
+        text = await f.text();
       }
 
       setFileContent(text);
-
-      if (file.category === 'markdown') {
-        const outline = extractMarkdownOutline(text);
-        setOutlineItems(outline);
-        setFileStats(calculateDocumentStats(text));
-      } else if (['text', 'code', 'json'].includes(file.category || '')) {
-        setFileStats(calculateDocumentStats(text));
-      }
+      setOutlineItems(extractMarkdownOutline(text));
+      setFileStats(calculateDocumentStats(text));
     } catch (err) {
       console.error('Error reading file content:', err);
     }
@@ -571,17 +552,6 @@ export default function App() {
     }
   }, [addFolderToWorkspace, handleSelectFile]);
 
-  // Word viewer extracts HTML outline callback
-  const handleWordOutlineExtracted = useCallback((htmlContent: string) => {
-    const wordOutline = extractHtmlOutline(htmlContent);
-    setOutlineItems(wordOutline);
-  }, []);
-
-  // PPT viewer extracts outline callback
-  const handlePptOutlineExtracted = useCallback((items: OutlineItem[]) => {
-    setOutlineItems(items);
-  }, []);
-
   // Callback handlers memoized for optimal performance during resizing
   const handleToggleTheme = useCallback(() => setTheme(t => t === 'light' ? 'dark' : 'light'), []);
   const handleToggleFileTree = useCallback(() => setShowFileTree(v => !v), []);
@@ -662,37 +632,9 @@ export default function App() {
             onHeadingIntersect={handleHeadingIntersect}
           />
         );
-      case 'word':
-        return (
-          <WordViewer 
-            fileNode={selectedFile} 
-            onOutlineExtracted={handleWordOutlineExtracted} 
-            activeHeadingId={activeHeadingId}
-            onSelectHeading={handleSelectHeading}
-            onHeadingIntersect={handleHeadingIntersect}
-          />
-        );
-      case 'excel':
-        return <ExcelViewer fileNode={selectedFile} content={fileContent} />;
-      case 'image':
-        return <ImageViewer fileNode={selectedFile} content={fileContent} />;
-      case 'video':
-      case 'audio':
-        return <MediaViewer file={selectedFile} />;
-      case 'pdf':
-        return <PdfViewer fileNode={selectedFile} />;
-      case 'ppt':
-        return (
-          <PptViewer
-            fileNode={selectedFile}
-            onOutlineExtracted={handlePptOutlineExtracted}
-          />
-        );
-      case 'code':
-      case 'json':
-      case 'text':
+      // All other file types are previewed via the Open File Viewer SDK.
       default:
-        return <TextViewer fileNode={selectedFile} content={fileContent} theme={theme} />;
+        return <FilePreviewViewer fileNode={selectedFile} appTheme={theme} />;
     }
   };
 
