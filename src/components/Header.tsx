@@ -119,7 +119,7 @@ export const Header: React.FC<HeaderProps> = ({
   return (
     <header className="sticky top-0 z-30 flex flex-col border-b border-black/5 dark:border-white/10 bg-white/70 dark:bg-zinc-900/70 backdrop-blur-xl transition-colors duration-200">
       {/* Upper toolbar */}
-      <div className="flex items-center justify-between px-4 h-13 gap-3">
+      <div className="relative flex items-center justify-between px-4 h-13 gap-3">
         {/* Left: Brand & Folder Switcher Dropdown */}
         <div className="flex items-center gap-2 min-w-0">
           <button
@@ -242,8 +242,8 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
         </div>
 
-        {/* Middle: Quick search bar */}
-        <div className="flex-1 max-w-xs hidden md:block">
+        {/* Middle: Quick search bar (absolute-centered) */}
+        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 hidden md:block w-64 max-w-[40%]">
           <div className="relative">
             <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
             <input

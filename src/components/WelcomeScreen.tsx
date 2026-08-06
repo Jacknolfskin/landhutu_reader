@@ -25,16 +25,16 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
       <div className="max-w-xl w-full text-center space-y-8">
         {/* Brand Icon & Heading */}
         <div className="space-y-3">
-          <div className="inline-flex p-4 rounded-2xl bg-[#2b72ee] text-white dark:bg-blue-600 dark:text-white shadow-md shadow-blue-500/20">
-            <FolderOpen className="w-8 h-8" />
+          <div className="inline-flex items-center justify-center p-4 rounded-2xl bg-[#2b72ee]/10 dark:bg-blue-600/10 shadow-md shadow-blue-500/10">
+            <img src="/favicon.svg" alt="兰德糊涂's Reader" className="w-12 h-12" />
           </div>
 
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
-            打开文件，轻松阅读
+            兰德糊涂's Reader
           </h1>
 
           <p className="text-sm text-zinc-500 dark:text-zinc-400 max-w-md mx-auto leading-relaxed">
-            极简离线阅读体验。点击选择<b>本地文件或文件夹</b>，也可直接<b>将文件/文件夹拖拽至窗口</b>，即刻解析 Markdown、Word、Excel、图片、音视频及代码大纲。
+            智能且友好的本地阅读器，点击选择或拖拽<b>本地文件/文件夹</b>，即刻阅览
           </p>
         </div>
 
@@ -68,13 +68,13 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
           <div className="p-3.5 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 shadow-xs">
             <ListTree className="w-4 h-4 text-emerald-500 mb-2" />
             <h3 className="text-xs font-semibold text-zinc-900 dark:text-zinc-100 mb-0.5">智能大纲</h3>
-            <p className="text-[11px] text-zinc-500 leading-tight">自动提取 H1-H6 标题大纲点击跳转</p>
+            <p className="text-[11px] text-zinc-500 leading-tight">自动提取大纲&amp;点击跳转</p>
           </div>
 
           <div className="p-3.5 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 shadow-xs">
             <FileSpreadsheet className="w-4 h-4 text-indigo-500 mb-2" />
             <h3 className="text-xs font-semibold text-zinc-900 dark:text-zinc-100 mb-0.5">Office 文档</h3>
-            <p className="text-[11px] text-zinc-500 leading-tight">Word (.docx) &amp; Excel/CSV 交互表格</p>
+            <p className="text-[11px] text-zinc-500 leading-tight">Word&amp;Excel/CSV&amp;PPT</p>
           </div>
 
           <div className="p-3.5 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 shadow-xs">
