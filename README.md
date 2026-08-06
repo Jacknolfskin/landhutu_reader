@@ -4,6 +4,8 @@
 
 > 完全基于浏览器端本地处理，文件隐私绝不上传任何服务器。
 
+🌐 **在线演示**：[https://reader.landhutu.cc/](https://reader.landhutu.cc/)
+
 ---
 
 ## ✨ 核心功能亮点
