@@ -311,10 +311,10 @@ export const Header: React.FC<HeaderProps> = ({
         {/* Right: Document Outline toggle button - aligned with "全部" row */}
         <button
           onClick={onToggleOutline}
-          className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap transition-all shrink-0 ml-2 ${
+          className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap transition-all shrink-0 ml-2 border ${
             showOutline 
-              ? 'bg-[#2b72ee] text-white dark:bg-blue-600 dark:text-white shadow-xs font-medium' 
-              : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800/80 border border-zinc-200 dark:border-zinc-800'
+              ? 'bg-[#2b72ee] text-white dark:bg-blue-600 dark:text-white shadow-xs font-medium border-transparent' 
+              : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800/80 border-zinc-200 dark:border-zinc-800'
           }`}
           title={showOutline ? "隐藏大纲" : "显示文档大纲"}
         >

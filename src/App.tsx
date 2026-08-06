@@ -17,6 +17,7 @@ import {
   clearWorkspaceStorage 
 } from './utils/storage';
 import { UploadCloud } from 'lucide-react';
+import { AnimatePresence, motion } from 'motion/react';
 
 import { Header } from './components/Header';
 import { FileTree } from './components/FileTree';
@@ -726,44 +727,52 @@ export default function App() {
       {/* Main Workspace Layout */}
       <div className="flex-1 flex overflow-hidden relative">
         {/* Left Sidebar: File Tree Directory */}
-        {showFileTree && (
-          <div 
-            className="h-full shrink-0 relative group z-10"
-            style={{ width: `${fileTreeWidth}px` }}
-          >
-            <FileTree
-              rootNode={activeFolder}
-              loadedFolders={loadedFolders}
-              activeFolderId={activeFolderId}
-              onSwitchFolder={handleSwitchFolder}
-              onCloseFolder={handleCloseFolder}
-              onOpenFolder={handleOpenLocal}
-              onLoadDemoFolder={handleLoadDemoFolder}
-              selectedFileId={selectedFile?.id || null}
-              onSelectFile={handleSelectFile}
-              searchQuery={searchQuery}
-              categoryFilter={selectedCategory}
-              onRefreshFolder={handleRefreshFolder}
-              isRefreshing={isRefreshing}
-            />
-
-            {/* Left Resizer Drag Handle */}
-            <div
-              onMouseDown={handleLeftResizeStart}
-              onDoubleClick={handleResetFileTreeWidth}
-              className="absolute top-0 -right-1.5 w-3 h-full cursor-col-resize z-30 flex justify-center"
-              title="拖拽调节侧边栏宽度，双击恢复默认"
+        <AnimatePresence initial={false}>
+          {showFileTree && (
+            <motion.div
+              key="filetree-sidebar"
+              className="h-full shrink-0 overflow-hidden"
+              initial={{ width: 0 }}
+              animate={{ width: fileTreeWidth }}
+              exit={{ width: 0 }}
+              transition={{ type: 'tween', duration: 0.25, ease: 'easeInOut' }}
             >
-              <div 
-                className={`w-[2px] h-full transition-colors duration-150 ${
-                  isResizingLeft 
-                    ? 'bg-blue-500 dark:bg-blue-400' 
-                    : 'bg-transparent active:bg-blue-500 dark:active:bg-blue-400'
-                }`} 
-              />
-            </div>
-          </div>
-        )}
+              <div className="relative h-full z-10 group" style={{ width: `${fileTreeWidth}px` }}>
+                <FileTree
+                  rootNode={activeFolder}
+                  loadedFolders={loadedFolders}
+                  activeFolderId={activeFolderId}
+                  onSwitchFolder={handleSwitchFolder}
+                  onCloseFolder={handleCloseFolder}
+                  onOpenFolder={handleOpenLocal}
+                  onLoadDemoFolder={handleLoadDemoFolder}
+                  selectedFileId={selectedFile?.id || null}
+                  onSelectFile={handleSelectFile}
+                  searchQuery={searchQuery}
+                  categoryFilter={selectedCategory}
+                  onRefreshFolder={handleRefreshFolder}
+                  isRefreshing={isRefreshing}
+                />
+
+                {/* Left Resizer Drag Handle */}
+                <div
+                  onMouseDown={handleLeftResizeStart}
+                  onDoubleClick={handleResetFileTreeWidth}
+                  className="absolute top-0 -right-1.5 w-3 h-full cursor-col-resize z-30 flex justify-center"
+                  title="拖拽调节侧边栏宽度，双击恢复默认"
+                >
+                  <div 
+                    className={`w-[2px] h-full transition-colors duration-150 ${
+                      isResizingLeft 
+                        ? 'bg-blue-500 dark:bg-blue-400' 
+                        : 'bg-transparent active:bg-blue-500 dark:active:bg-blue-400'
+                    }`} 
+                  />
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Center: File Content Viewer */}
         <main className={`flex-1 flex flex-col min-w-0 h-full overflow-hidden relative ${(isResizingLeft || isResizingRight) ? 'pointer-events-none select-none' : ''}`}>
@@ -771,20 +780,33 @@ export default function App() {
         </main>
 
         {/* Right Sidebar: Document Outline (大纲) */}
-        {showOutline && selectedFile && (
-          <OutlineSidebar
-            outlineItems={outlineItems}
-            activeHeadingId={activeHeadingId}
-            onSelectHeading={handleSelectHeading}
-            stats={fileStats}
-            fileName={selectedFile.name}
-            onClose={handleCloseOutline}
-            width={outlineWidth}
-            onResizeStart={handleRightResizeStart}
-            onResetWidth={handleResetOutlineWidth}
-            isResizing={isResizingRight}
-          />
-        )}
+        <AnimatePresence initial={false}>
+          {showOutline && selectedFile && (
+            <motion.div
+              key="outline-sidebar"
+              className="h-full shrink-0 overflow-hidden"
+              initial={{ width: 0 }}
+              animate={{ width: outlineWidth }}
+              exit={{ width: 0 }}
+              transition={{ type: 'tween', duration: 0.25, ease: 'easeInOut' }}
+            >
+              <div className="h-full" style={{ width: `${outlineWidth}px` }}>
+                <OutlineSidebar
+                  outlineItems={outlineItems}
+                  activeHeadingId={activeHeadingId}
+                  onSelectHeading={handleSelectHeading}
+                  stats={fileStats}
+                  fileName={selectedFile.name}
+                  onClose={handleCloseOutline}
+                  width={outlineWidth}
+                  onResizeStart={handleRightResizeStart}
+                  onResetWidth={handleResetOutlineWidth}
+                  isResizing={isResizingRight}
+                />
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
         {/* Toast Notification Banner */}
         {toastMessage && (
           <div className="fixed bottom-5 right-5 z-50 max-w-md px-4 py-3 bg-zinc-900/90 dark:bg-zinc-100/95 text-zinc-100 dark:text-zinc-900 text-xs sm:text-sm rounded-xl shadow-xl backdrop-blur-md border border-zinc-700/50 dark:border-zinc-300/50 flex items-center justify-between gap-3 animate-in fade-in slide-in-from-bottom-3 duration-200">

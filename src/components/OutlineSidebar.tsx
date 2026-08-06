@@ -301,7 +301,7 @@ const OutlineSidebarComponent: React.FC<OutlineSidebarProps> = ({
           </div>
           <div className="flex items-center justify-between">
             <span className="text-zinc-400">预估用时:</span>
-            <span className="font-medium text-zinc-700 dark:text-zinc-300">~{stats.readingTimeMinutes} 分钟</span>
+            <span className="font-medium text-zinc-700 dark:text-zinc-300">{stats.readingTimeMinutes} 分钟</span>
           </div>
         </div>
       )}
